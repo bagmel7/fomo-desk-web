@@ -1,6 +1,8 @@
 /* Plan B iPhone app. Reads JSON from the unauthenticated gist API.
-   Setup values arrive only in the URL fragment, are stored in localStorage,
-   then the fragment is stripped. Those values are never written into this file. */
+   Setup values arrive only in the URL fragment (or a paste on the lock screen)
+   and are stored in localStorage. In browser/Safari the fragment is left on
+   the URL so Add to Home Screen keeps it. Those values are never written
+   into this file. */
 (function () {
   "use strict";
 
@@ -45,17 +47,36 @@
   function dataId() { return storeGet(SK_D); }
   function hasSetup() { return !!dataId(); }
 
+  function isStandalone() {
+    return (window.navigator && window.navigator.standalone === true) ||
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  }
+
+  /* Parse a full private URL, a #fragment, or a t=...&d=... string.
+     Stores values in localStorage. Never logs the raw string. */
+  function applySetupFromString(raw) {
+    if (!raw) return false;
+    var s = String(raw).trim();
+    var hash = "";
+    var i = s.indexOf("#");
+    if (i >= 0) hash = s.slice(i + 1);
+    else if (/[?&]?[td]=/.test(s)) hash = s.replace(/^[?#]/, "");
+    if (!hash) return false;
+    var q;
+    try { q = new URLSearchParams(hash); } catch (e) { return false; }
+    var tok = q.get("t");
+    var d = q.get("d");
+    if (tok) storeSet(SK_T, tok);
+    if (d) storeSet(SK_D, d);
+    return !!storeGet(SK_D);
+  }
+
   function consumeFragment() {
     var raw = window.location.hash || "";
     if (!raw || raw.length < 2) return;
-    var q = new URLSearchParams(raw.replace(/^#/, ""));
-    var t = q.get("t");
-    var d = q.get("d");
-    if (t) storeSet(SK_T, t);
-    if (d) storeSet(SK_D, d);
-    if (window.history && window.history.replaceState) {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
-    }
+    applySetupFromString(raw);
+    // Browser/Safari: keep the fragment so Add to Home Screen saves it.
+    // Standalone: localStorage already has the values; do not strip if present.
   }
 
   function fmtMoney(n, digits) {
@@ -857,12 +878,32 @@
     el.app.classList.toggle("hidden", on);
   }
 
-  function boot() {
-    consumeFragment();
-    if (!hasSetup()) {
-      showLock(true);
-      return;
-    }
+  function bindLockForm() {
+    var form = $("lock-form");
+    if (!form || form.getAttribute("data-bound")) return;
+    form.setAttribute("data-bound", "1");
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var input = $("lock-paste");
+      var err = $("lock-error");
+      var raw = input ? input.value : "";
+      if (!applySetupFromString(raw)) {
+        if (err) {
+          err.hidden = false;
+          err.textContent = "That didn't look like the private link. Paste the whole thing, including the # part.";
+        }
+        return;
+      }
+      if (input) input.value = "";
+      if (err) { err.hidden = true; err.textContent = ""; }
+      startApp();
+    });
+  }
+
+  var started = false;
+  function startApp() {
+    if (started) return;
+    started = true;
     showLock(false);
     el.view.innerHTML = '<div class="balance-block"><div class="skel" style="height:72px;width:70%;margin:8px 0"></div><div class="skel" style="height:180px;width:100%;margin:16px 0"></div></div>';
     document.addEventListener("click", onTap);
@@ -871,6 +912,20 @@
       navigator.serviceWorker.register("sw.js").catch(function () {});
     }
     fetchDesk().then(function () { schedule(POLL_MS); });
+  }
+
+  function boot() {
+    consumeFragment();
+    bindLockForm();
+    window.addEventListener("hashchange", function () {
+      consumeFragment();
+      if (hasSetup() && !started) startApp();
+    });
+    if (!hasSetup()) {
+      showLock(true);
+      return;
+    }
+    startApp();
   }
 
   boot();

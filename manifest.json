@@ -1,7 +1,6 @@
 {
   "name": "FOMO Trading Desk",
   "short_name": "FOMO Desk",
-  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",

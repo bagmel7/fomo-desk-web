@@ -18,9 +18,16 @@
   <body>
     <div id="lock" class="lock hidden" hidden>
       <div class="lock-inner">
-        <p class="lock-kicker">Grok Bot</p>
+        <p class="lock-kicker">FOMO Desk</p>
         <h1>FOMO Trading Desk</h1>
-        <p class="lock-copy">Open the private link from Grok Bot to unlock the desk on this iPhone. The app will remember it after that.</p>
+        <p class="lock-copy">Open the private link your Telegram desk bot sent (/app).</p>
+        <p class="lock-hint">Open it in Safari (in Telegram, long-press the link and choose Open in Safari — don't use Telegram's browser). Then Share → Add to Home Screen so the icon opens unlocked. You can also paste the link below.</p>
+        <form id="lock-form" class="lock-form" action="#">
+          <label for="lock-paste" class="lock-label">Or paste the private link here</label>
+          <input id="lock-paste" type="url" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="Paste the whole private link" />
+          <button type="submit" class="lock-btn">Unlock</button>
+          <p id="lock-error" class="lock-error" hidden></p>
+        </form>
       </div>
     </div>
 
