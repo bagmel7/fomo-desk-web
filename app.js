@@ -107,7 +107,7 @@
     if (!ts) return "";
     var d = new Date(ts);
     if (isNaN(d.getTime())) return "";
-    return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" }) + " ET";
   }
   function esc(s) {
     return String(s == null ? "" : s)
@@ -130,6 +130,22 @@
 
   function prettyKey(key) {
     return key.replace(/^(scanner|auditor|executor|risk)_/, "").replace(/_/g, " ");
+  }
+
+  var GROUP_KEYS = {
+    scanner: ["min_liquidity_usd", "scanner_max_top10_pct", "max_h1_change_pct", "scanner_poll_s", "scanner_min_pool_age_min", "max_wait_min", "runner_h24_pct"],
+    auditor: ["auditor_enabled", "max_dev_pct", "auditor_max_top10_pct", "min_lp_locked_pct", "auditor_min_pool_age_min", "max_bundled", "max_delegated_accounts", "retries"],
+    analyst: ["analyst_mode", "min_alive_6h", "min_organic", "max_chase", "min_score", "timeout_s", "alive_volume_h1", "organic_buys_h1", "bundled_penalty", "flush_drop_m5_pct", "chase_h1_pct"],
+    executor: ["stack_pct", "max_pool_pct", "min_ticket_usd", "below_min", "recheck_liq_drop_pct", "recheck_price_up_pct", "executor_confirm_window_min"],
+    risk: ["risk_poll_s", "stop_pct", "trail_start_pct", "trail_pct", "timeout_h", "timeout_min_gain_pct", "risk_confirm_window_min"],
+    desk: ["mode", "paper_start_stack", "report_time", "notifier", "rpc_url", "push_rejects", "fees_ref_discount", "fomo_handle"]
+  };
+
+  function groupKeys(name, obj) {
+    obj = obj || {};
+    var keys = (GROUP_KEYS[name] || []).filter(function (k) { return Object.prototype.hasOwnProperty.call(obj, k); });
+    Object.keys(obj).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); });
+    return keys;
   }
 
   /* ---------- fetch ---------- */
@@ -536,23 +552,45 @@
       (sub ? '<div class="act-sub">' + esc(sub) + "</div>" : "") + "</div></div>";
   }
 
+  function settingEntry(entry) {
+    if (entry && typeof entry === "object" && !Array.isArray(entry)) return entry;
+    return { value: entry, display: entry, range: "" };
+  }
+
   function renderSettings(group) {
     state.screen = "settings";
     state.settingsGroup = group;
     syncTabs();
-    var groups = (settings().groups) || {};
+    var data = settings();
+    var groups = data.groups || {};
     var keys = group && groups[group] ? [[group, groups[group]]] : Object.keys(groups).map(function (g) { return [g, groups[g]]; });
     var h = '<header class="nav"><button type="button" class="back-btn" data-back="1" aria-label="Back">' + iconBack() + "</button>";
     h += "<h1>Settings</h1></header>";
-    h += '<p class="note">Every setting is read-only in this app. Change them through Telegram.</p>';
+    h += '<p class="note">' + esc(data.note || "Every setting is read-only in this app. Change them through Telegram (set stop to -8%, stack 1240, …).") + "</p>";
     keys.forEach(function (pair) {
       h += '<div class="group-title">' + esc(cap(pair[0])) + "</div><div class=\"list\">";
-      Object.keys(pair[1] || {}).forEach(function (k) {
-        h += '<div class="setting-row"><div class="mid"><div class="name">' + esc(prettyKey(k)) + "</div></div>";
-        h += '<div class="val">' + esc(pair[1][k]) + "</div></div>";
+      groupKeys(pair[0], pair[1] || {}).forEach(function (k) {
+        var e = settingEntry(pair[1][k]);
+        var val = e.display != null && e.display !== "" ? e.display : e.value;
+        h += '<div class="setting-row"><div class="mid"><div class="name">' + esc(prettyKey(k)) + "</div>";
+        if (e.range) h += '<div class="range">' + esc(e.range) + "</div>";
+        h += '</div><div class="val">' + esc(val == null ? "" : val) + "</div></div>";
       });
       h += "</div>";
     });
+    var changes = data.changes || [];
+    if (changes.length) {
+      h += '<div class="group-title">Recent changes</div><div class="list">';
+      changes.forEach(function (c) {
+        var label = c.name || prettyKey(c.key || "");
+        var detail = (c.old || "—") + " → " + (c.new || "—");
+        if (c.who) detail += " · " + c.who;
+        if (c.ts) detail += " · " + fmtWhen(c.ts);
+        h += '<div class="setting-row"><div class="mid"><div class="name">' + esc(label) + "</div>";
+        h += '<div class="range">' + esc(detail) + "</div></div></div>";
+      });
+      h += "</div>";
+    }
     el.view.innerHTML = h;
   }
 

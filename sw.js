@@ -1,5 +1,5 @@
 /* App-shell cache only. Plan B has no web push. Never cache gist or API responses. */
-var CACHE = "fomo-desk-shell-v3";
+var CACHE = "fomo-desk-shell-v4";
 var SHELL = ["./", "./index.html", "./app.css", "./app.js", "./chart.js", "./manifest.json"];
 
 self.addEventListener("install", function (event) {
