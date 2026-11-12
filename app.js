@@ -511,6 +511,7 @@
     h += '<p class="note">Mode is read-only here. Switch it in Telegram.</p>';
     h += '<div class="stack-box"><div class="stack-label">Stack</div>';
     h += '<div class="stack-val num">' + esc(fmtMoney(a.stack != null ? a.stack : snap().balance)) + "</div></div>";
+    if (a.fee_model) h += '<p class="note fee-model">' + esc(a.fee_model) + "</p>";
 
     h += rowLink("Your FOMO profile", a.fomo_handle ? "@" + a.fomo_handle : "", a.profile_url);
     h += rowAction("Invite a friend", "Share the signup link", "invite");
@@ -638,14 +639,29 @@
     h += stat("24h volume", st.volume_24h != null ? fmtMoney(st.volume_24h, 0) : "—");
     h += stat("Holders", st.holders == null ? "n/a" : String(st.holders));
     h += "</div>";
-    if (open && pos) {
-      h += '<div class="pos-card"><h3>Your position · ' + esc(fmtMoney(pos.size_usd)) + " in · Executor</h3>";
-      h += '<div class="muted">Entry ' + esc(fmtMoney(pos.entry_price, 6)) + "</div></div>";
-      h += '<div class="exit-card"><h3>Exit</h3>';
-      if (c.exit_lines && c.exit_lines.stop != null) h += '<div>Stop ' + esc(fmtMoney(c.exit_lines.stop, 6)) + "</div>";
-      if (c.exit_lines && c.exit_lines.trail != null) h += '<div>Trail ' + esc(fmtMoney(c.exit_lines.trail, 6)) + "</div>";
-      if (pos.time_left_s != null) h += '<div class="muted">Time left ' + esc(fmtDuration(pos.time_left_s)) + "</div>";
+    if (pos && (open || pos.closed_at)) {
+      var heading = open
+        ? ("Your position · " + fmtMoney(pos.size_usd) + " in · Executor")
+        : ("Closed · " + fmtMoney(pos.size_usd) + " · " + (pos.exit_reason || "sold"));
+      h += '<div class="pos-card"><h3>' + esc(heading) + "</h3>";
+      h += '<div class="muted">Entry ' + esc(fmtMoney(pos.entry_price, 6)) + "</div>";
+      if (pos.exit_price != null) h += '<div class="muted">Exit ' + esc(fmtMoney(pos.exit_price, 6)) + "</div>";
+      h += feeLines(pos);
+      if (pos.pnl_usd != null) {
+        var pnl = Number(pos.pnl_usd);
+        var fees = pos.fees_usd != null ? fmtMoney(pos.fees_usd) : null;
+        h += '<div class="pos-pnl ' + (pnl >= 0 ? "up" : "down") + '">' +
+          esc((pnl >= 0 ? "+" : "−") + fmtMoney(Math.abs(pnl))) +
+          (fees ? " after " + fees + " fees" : "") + "</div>";
+      }
       h += "</div>";
+      if (open) {
+        h += '<div class="exit-card"><h3>Exit</h3>';
+        if (c.exit_lines && c.exit_lines.stop != null) h += '<div>Stop ' + esc(fmtMoney(c.exit_lines.stop, 6)) + "</div>";
+        if (c.exit_lines && c.exit_lines.trail != null) h += '<div>Trail ' + esc(fmtMoney(c.exit_lines.trail, 6)) + "</div>";
+        if (pos.time_left_s != null) h += '<div class="muted">Time left ' + esc(fmtDuration(pos.time_left_s)) + "</div>";
+        h += "</div>";
+      }
     }
     var audit = auditFile(mint);
     if (audit) {
@@ -663,6 +679,19 @@
 
   function stat(lbl, val) {
     return '<div><div class="stat-lbl">' + esc(lbl) + '</div><div class="stat-val">' + esc(val) + "</div></div>";
+  }
+  function feeLines(pos) {
+    if (!pos) return "";
+    var buy = pos.fee_buy_usd;
+    var sell = pos.fee_sell_usd;
+    var total = pos.fees_usd != null ? pos.fees_usd : pos.fees_est_usd;
+    var h = '<div class="pos-fees">';
+    if (buy != null) h += '<div>Buy fee ' + esc(fmtMoney(buy)) + (pos.fee_bracket ? " · " + pos.fee_bracket : "") + "</div>";
+    if (sell != null) h += '<div>' + (pos.open ? "Est. sell fee " : "Sell fee ") + esc(fmtMoney(sell)) + "</div>";
+    if (total != null) h += '<div>Round trip ' + esc(fmtMoney(total)) + " · gas $0</div>";
+    if (pos.fee_model) h += '<div class="muted">' + esc(pos.fee_model) + "</div>";
+    h += "</div>";
+    return h;
   }
   function fmtDuration(s) {
     s = Math.max(0, Number(s) || 0);

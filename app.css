@@ -568,3 +568,10 @@ img { display: block; }
   * { animation: none !important; transition: none !important; }
   .skel { animation: none; opacity: 0.7; }
 }
+
+.pos-fees { margin-top: 8px; font-size: 14px; color: var(--secondary, #c8c8c8); line-height: 1.45; }
+.pos-fees .muted { margin-top: 6px; font-size: 12px; }
+.pos-pnl { margin-top: 8px; font-size: 16px; font-weight: 600; }
+.pos-pnl.up { color: var(--green, #3dd68c); }
+.pos-pnl.down { color: var(--red, #ff5c5c); }
+.fee-model { margin-top: 8px; }
