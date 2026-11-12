@@ -284,10 +284,18 @@
     el.view.innerHTML = html;
   }
 
+  function deskHandle() {
+    var raw = (snap().fomo_handle || account().fomo_handle || "").replace(/^@/, "");
+    return raw;
+  }
+
   function navBar(home, unread) {
+    var handle = deskHandle();
+    var title = handle || "Desk";
+    var initial = (handle ? handle.charAt(0) : "D").toUpperCase();
     var h = '<header class="nav">';
-    h += '<button type="button" class="avatar" data-go="account" aria-label="Account">G</button>';
-    h += '<h1>Grok Bot <span style="color:var(--tertiary)">›</span></h1>';
+    h += '<button type="button" class="avatar" data-go="account" aria-label="Account">' + esc(initial) + "</button>";
+    h += "<h1>" + esc(title) + ' <span style="color:var(--tertiary)">›</span></h1>';
     h += '<button type="button" class="icon-btn" data-go="search" aria-label="Search">' + iconSearch() + "</button>";
     h += '<button type="button" class="icon-btn" data-go="activity" aria-label="Activity">';
     h += iconBell();
