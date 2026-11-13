@@ -189,6 +189,25 @@ img { display: block; }
   letter-spacing: 0.02em;
 }
 .paper-pill { background: var(--orange); color: #000; margin-top: 14px; }
+.real-pill {
+  background: var(--pink);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.real-pos { padding: 10px var(--gutter) 4px; }
+.real-pos .real-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.real-pos .real-pnl { font-variant-numeric: tabular-nums; font-weight: 600; }
+.real-pos .real-pnl.up { color: var(--green); }
+.real-pos .real-pnl.down { color: var(--red); }
 .meta-row {
   display: flex;
   align-items: center;

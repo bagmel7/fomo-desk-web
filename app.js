@@ -425,6 +425,11 @@
     return (n != null ? n : 0) + " today";
   }
 
+  function isReal(r) {
+    if (!r) return false;
+    if (r.real || r.pill === "REAL") return true;
+    return !!(r.kind && String(r.kind).indexOf("real_") === 0);
+  }
   function activityList(rows, emptyText) {
     if (!rows || !rows.length) return '<div class="empty">' + esc(emptyText) + "</div>";
     var h = '<div class="list">';
@@ -433,7 +438,9 @@
       if (r.kind === "sold" || (typeof r.value === "string" && r.value.charAt(0) === "+")) cls += " up";
       if (r.kind === "stopped" || (typeof r.value === "string" && r.value.charAt(0) === "-")) cls += " down";
       h += '<button type="button" class="act-row" data-act-mint="' + esc(r.mint || "") + '" data-act-screen="' + esc(r.screen || "") + '" data-act-url="' + esc(r.coin_url || "") + '">';
-      h += '<div class="mid"><div class="act-title">' + esc(actTitle(r)) + "</div>";
+      h += '<div class="mid"><div class="act-title">';
+      if (isReal(r)) h += '<span class="real-pill">REAL</span>';
+      h += esc(actTitle(r)) + "</div>";
       h += '<div class="act-sub">' + esc(actSub(r)) + "</div></div>";
       h += '<div class="' + cls + '">' + esc(r.value || "") + "</div>";
       h += "</button>";
@@ -444,7 +451,7 @@
   function actTitle(r) {
     if (r.title) {
       if (/^Bought |^Sold |^Stopped |^Rejected /.test(r.title)) return r.title;
-      var verb = { bought: "Bought", sold: "Sold", stopped: "Stopped", rejected: "Rejected" }[r.kind];
+      var verb = { bought: "Bought", sold: "Sold", stopped: "Stopped", rejected: "Rejected", real_buy: "Bought", real_sell: "Sold" }[r.kind];
       return verb ? verb + " " + r.title : r.title;
     }
     return r.kind || "";
@@ -512,6 +519,32 @@
     h += '<div class="stack-box"><div class="stack-label">Stack</div>';
     h += '<div class="stack-val num">' + esc(fmtMoney(a.stack != null ? a.stack : snap().balance)) + "</div></div>";
     if (a.fee_model) h += '<p class="note fee-model">' + esc(a.fee_model) + "</p>";
+
+    var reals = a.real_positions || [];
+    h += '<div class="group-title">Real positions</div>';
+    h += '<div class="real-pos">';
+    var pnl = a.real_pnl_usd;
+    if (pnl != null) {
+      var pnlCls = Number(pnl) >= 0 ? "up" : "down";
+      var pnlTxt = (Number(pnl) >= 0 ? "+" : "−") + fmtMoney(Math.abs(Number(pnl)));
+      h += '<div class="real-head"><div class="act-sub">Session P/L</div><div class="real-pnl ' + pnlCls + '">' + esc(pnlTxt) + "</div></div>";
+    }
+    if (!reals.length) {
+      h += '<p class="note">No open real positions</p>';
+    } else {
+      reals.forEach(function (pos) {
+        var name = pos.symbol || (pos.mint ? pos.mint.slice(0, 6) : "Coin");
+        var subBits = [];
+        if (pos.entry_price != null) subBits.push("Entry " + fmtMoney(pos.entry_price, 6));
+        if (pos.stop_price != null) subBits.push("Stop " + fmtMoney(pos.stop_price, 6) + (pos.stop_pct != null ? " (−" + Number(pos.stop_pct).toFixed(0) + "%)" : " (−6%)"));
+        if (pos.tp_price != null) subBits.push("TP " + fmtMoney(pos.tp_price, 6));
+        if (pos.usd != null) subBits.push(fmtMoney(pos.usd));
+        if (pos.reason) subBits.push(pos.reason);
+        if (pos.coin_url) h += rowLink(name, subBits.join(" · "), pos.coin_url);
+        else h += rowStatic(name, subBits.join(" · "));
+      });
+    }
+    h += "</div>";
 
     h += rowLink("Your FOMO profile", a.fomo_handle ? "@" + a.fomo_handle : "", a.profile_url);
     h += rowAction("Invite a friend", "Share the signup link", "invite");
